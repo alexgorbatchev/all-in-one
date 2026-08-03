@@ -7,7 +7,121 @@ import math
 import torch
 from abc import ABC,  abstractmethod
 from typing import Optional, Tuple, Callable
-from natten.functional import natten1dav, natten1dqkrpb, natten2dav, natten2dqkrpb
+try:
+  from natten.functional import natten1dav, natten1dqkrpb, natten2dav, natten2dqkrpb
+except ImportError:
+  def natten1dqkrpb(query: torch.Tensor, key: torch.Tensor, rpb: torch.Tensor, kernel_size: int, dilation: int) -> torch.Tensor:
+    B, H, T, D = query.shape
+    K = kernel_size
+    d = dilation
+    R = K // 2
+    
+    i_idx = torch.arange(T, device=query.device)
+    s = torch.clamp(i_idx - R * d, min=0)
+    s = torch.where(s + (K - 1) * d >= T, T - 1 - (K - 1) * d, s)
+    k_idx = torch.arange(K, device=query.device)
+    j_indices = s.unsqueeze(1) + k_idx.unsqueeze(0) * d
+    
+    j_indices_expanded = j_indices.view(1, 1, T, K, 1).expand(B, H, T, K, D)
+    key_expanded = key.unsqueeze(2).expand(B, H, K, T, D).transpose(2, 3)
+    gathered_keys = torch.gather(key_expanded, 2, j_indices_expanded)
+    
+    scores = (query.unsqueeze(3) * gathered_keys).sum(dim=-1)
+    rel_pos = (j_indices - i_idx.unsqueeze(1)) // d + 2 * R
+    rpb_gathered = rpb[:, rel_pos]
+    return scores + rpb_gathered.unsqueeze(0)
+
+  def natten1dav(attn_probs: torch.Tensor, value: torch.Tensor, kernel_size: int, dilation: int) -> torch.Tensor:
+    B, H, T, D = value.shape
+    K = kernel_size
+    d = dilation
+    R = K // 2
+    
+    i_idx = torch.arange(T, device=value.device)
+    s = torch.clamp(i_idx - R * d, min=0)
+    s = torch.where(s + (K - 1) * d >= T, T - 1 - (K - 1) * d, s)
+    k_idx = torch.arange(K, device=value.device)
+    j_indices = s.unsqueeze(1) + k_idx.unsqueeze(0) * d
+    
+    j_indices_expanded = j_indices.view(1, 1, T, K, 1).expand(B, H, T, K, D)
+    value_expanded = value.unsqueeze(2).expand(B, H, K, T, D).transpose(2, 3)
+    gathered_values = torch.gather(value_expanded, 2, j_indices_expanded)
+    
+    return (attn_probs.unsqueeze(-1) * gathered_values).sum(dim=3)
+
+  def natten2dqkrpb(query: torch.Tensor, key: torch.Tensor, rpb: torch.Tensor, kernel_size: int, dilation: int) -> torch.Tensor:
+    B, H, H_feat, W_feat, D = query.shape
+    K = kernel_size
+    d = dilation
+    R = K // 2
+    
+    y_idx = torch.arange(H_feat, device=query.device)
+    sy = torch.clamp(y_idx - R * d, min=0)
+    sy = torch.where(sy + (K - 1) * d >= H_feat, H_feat - 1 - (K - 1) * d, sy)
+    ky_idx = torch.arange(K, device=query.device)
+    jy_indices = sy.unsqueeze(1) + ky_idx.unsqueeze(0) * d
+    
+    x_idx = torch.arange(W_feat, device=query.device)
+    sx = torch.clamp(x_idx - R * d, min=0)
+    sx = torch.where(sx + (K - 1) * d >= W_feat, W_feat - 1 - (K - 1) * d, sx)
+    kx_idx = torch.arange(K, device=query.device)
+    jx_indices = sx.unsqueeze(1) + kx_idx.unsqueeze(0) * d
+    
+    jy_grid = jy_indices.view(H_feat, 1, K, 1).expand(H_feat, W_feat, K, K)
+    jx_grid = jx_indices.view(1, W_feat, 1, K).expand(H_feat, W_feat, K, K)
+    
+    key_flat = key.view(B, H, H_feat * W_feat, D)
+    flat_neighbor_idx = jy_grid * W_feat + jx_grid
+    flat_neighbor_idx = flat_neighbor_idx.view(1, 1, H_feat, W_feat, K * K, 1).expand(B, H, H_feat, W_feat, K * K, D)
+    
+    gathered_keys = torch.gather(
+      key_flat.view(B, H, 1, 1, H_feat * W_feat, D).expand(B, H, H_feat, W_feat, H_feat * W_feat, D),
+      4,
+      flat_neighbor_idx
+    )
+    
+    scores = (query.unsqueeze(4) * gathered_keys).sum(dim=-1)
+    
+    rel_y = (jy_grid - y_idx.view(H_feat, 1, 1, 1)) // d + 2 * R
+    rel_x = (jx_grid - x_idx.view(1, W_feat, 1, 1)) // d + 2 * R
+    rel_y_flat = rel_y.reshape(H_feat, W_feat, K * K)
+    rel_x_flat = rel_x.reshape(H_feat, W_feat, K * K)
+    
+    rpb_gathered = rpb[:, rel_y_flat, rel_x_flat]
+    return scores + rpb_gathered.unsqueeze(0)
+
+  def natten2dav(attn_probs: torch.Tensor, value: torch.Tensor, kernel_size: int, dilation: int) -> torch.Tensor:
+    B, H, H_feat, W_feat, D = value.shape
+    K = kernel_size
+    d = dilation
+    R = K // 2
+    
+    y_idx = torch.arange(H_feat, device=value.device)
+    sy = torch.clamp(y_idx - R * d, min=0)
+    sy = torch.where(sy + (K - 1) * d >= H_feat, H_feat - 1 - (K - 1) * d, sy)
+    ky_idx = torch.arange(K, device=value.device)
+    jy_indices = sy.unsqueeze(1) + ky_idx.unsqueeze(0) * d
+    
+    x_idx = torch.arange(W_feat, device=value.device)
+    sx = torch.clamp(x_idx - R * d, min=0)
+    sx = torch.where(sx + (K - 1) * d >= W_feat, W_feat - 1 - (K - 1) * d, sx)
+    kx_idx = torch.arange(K, device=value.device)
+    jx_indices = sx.unsqueeze(1) + kx_idx.unsqueeze(0) * d
+    
+    jy_grid = jy_indices.view(H_feat, 1, K, 1).expand(H_feat, W_feat, K, K)
+    jx_grid = jx_indices.view(1, W_feat, 1, K).expand(H_feat, W_feat, K, K)
+    
+    value_flat = value.view(B, H, H_feat * W_feat, D)
+    flat_neighbor_idx = jy_grid * W_feat + jx_grid
+    flat_neighbor_idx = flat_neighbor_idx.view(1, 1, H_feat, W_feat, K * K, 1).expand(B, H, H_feat, W_feat, K * K, D)
+    
+    gathered_values = torch.gather(
+      value_flat.view(B, H, 1, 1, H_feat * W_feat, D).expand(B, H, H_feat, W_feat, H_feat * W_feat, D),
+      4,
+      flat_neighbor_idx
+    )
+    
+    return (attn_probs.unsqueeze(-1) * gathered_values).sum(dim=4)
 from ..config import Config
 from .utils import *
 

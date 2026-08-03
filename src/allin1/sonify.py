@@ -23,6 +23,9 @@ def sonify(
     return_list = False
     results = [results]
 
+  if len(results) <= 1:
+    multiprocess = False
+
   sonif_fn = partial(_sonify, out_dir=out_dir)
   if multiprocess:
     pool = Pool()
@@ -46,8 +49,12 @@ def _sonify(
   out_dir: PathLike = None,
 ) -> Tuple[NDArray, float]:
   sr = 44100
-  y = demucs.separate.load_track(result.path, 2, sr).numpy()
-  # y, sr = librosa.load(result.path, sr=None, mono=False)
+  try:
+    y = demucs.separate.load_track(result.path, 2, sr).numpy()
+  except (AttributeError, Exception):
+    y, _ = librosa.load(result.path, sr=sr, mono=False)
+    if y.ndim == 1:
+      y = np.stack([y, y])
 
   length = y.shape[-1]
   metronome = _sonify_metronome(result, length, sr)
@@ -77,8 +84,9 @@ def _sonify_metronome(
   # Exclude downbeats from beats.
   downbeats = np.asarray(result.downbeats)
   beats = np.asarray(result.beats)
-  dists = np.abs(downbeats[:, np.newaxis] - beats).min(axis=0)
-  beats = beats[dists > 0.03]
+  if len(downbeats) > 0 and len(beats) > 0:
+    dists = np.abs(downbeats[:, np.newaxis] - beats).min(axis=0)
+    beats = beats[dists > 0.03]
 
   clicks_beat = librosa.clicks(
     times=beats,

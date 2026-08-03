@@ -36,6 +36,9 @@ def visualize(
     return_list = False
     results = [results]
 
+  if len(results) <= 1:
+    multiprocess = False
+
   plot_fn = partial(_plot, out_dir=out_dir)
   if multiprocess:
     pool = Pool()
@@ -64,8 +67,10 @@ def _plot(
     colors = HARMONIX_COLORS
 
   sr = 44100
-  y = demucs.separate.load_track(result.path, 1, sr)[0].numpy()
-  # y, sr = librosa.load(result.path, sr=None, mono=True)
+  try:
+    y = demucs.separate.load_track(result.path, 1, sr)[0].numpy()
+  except (AttributeError, Exception):
+    y, _ = librosa.load(result.path, sr=sr, mono=True)
   rms = librosa.feature.rms(y=y, frame_length=4096, hop_length=1024)[0]
 
   fig = plt.figure(figsize=(12, 2))

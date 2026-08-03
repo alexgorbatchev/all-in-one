@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
   "numpy",
   "librosa",
+  "madmom @ git+https://github.com/CPJKU/madmom",
   "natten; platform_system == 'Darwin'",
   "demucs",
   "hydra-core",
@@ -55,6 +56,9 @@ allin1-preprocess = "allin1.training.preprocess:main"
 
 [tool.hatch.version]
 path = "src/allin1/__about__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/allin1"]
