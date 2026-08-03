@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
   "numpy",
   "librosa",
-  # agorbatchev: Pin CPJKU/madmom to commit 27f032e8 (latest commit on master containing Python 3.10+ collections.abc.MutableSequence and NumPy 1.24+ np.float fixes)
+  # agorbatchev: Pin CPJKU/madmom to commit 27f032e8 (latest commit as of 2024-08-25 containing Python 3.10+ collections.abc.MutableSequence and NumPy 1.24+/2.0 fixes)
   "madmom @ git+https://github.com/CPJKU/madmom@27f032e8947204902c675e5e341a3faf5dc86dae",
   "natten; platform_system == 'Darwin'",
   "demucs",
