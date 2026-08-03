@@ -13,12 +13,31 @@ This package provides models for music structure analysis, predicting:
 4. Functional segment boundaries
 5. Functional segment labels (e.g., intro, verse, chorus, bridge, outro)
 
+---
 
------
+## Fork Details (`alexgorbatchev/all-in-one`)
 
+This fork resolves C-extension compilation and dependency issues on **Python 3.12+** and **macOS (Apple Silicon / arm64)**.
+
+### Quick Install
+```bash
+pip install "allin1 @ git+https://github.com/alexgorbatchev/all-in-one"
+# or using uv:
+uv pip install "allin1 @ git+https://github.com/alexgorbatchev/all-in-one"
+```
+
+### Changes in this Fork (`agorbatchev:`)
+- **Python 3.12 & NumPy 2.0 Compatibility (`madmom`)**: Pinned `madmom @ git+https://github.com/CPJKU/madmom@27f032e8947204902c675e5e341a3faf5dc86dae` (commit as of 2024-08-25) in `pyproject.toml` to fix `collections.abc.MutableSequence` and NumPy 1.24+/2.0 `np.float` removals. Enabled `allow-direct-references = true` for Hatchling build backend.
+- **Pure PyTorch Neighborhood Attention (`natten`)**: Implemented a pure PyTorch fallback for 1D and 2D Neighborhood Attention with Relative Positional Bias in `src/allin1/models/dinat.py`. This bypasses C++ extension compilation failures (C++20 template errors on Apple Silicon macOS) and supports newer NATTEN versions (>0.17) where legacy functional endpoints were removed.
+- **Demucs 4.x Audio Loading**: Added `librosa.load` fallbacks for `demucs.separate.load_track` in `src/allin1/visualize.py` and `src/allin1/sonify.py`.
+- **Metronome Reduction Guard**: Added array size validation in `_sonify_metronome` to prevent `ValueError` on empty beat/downbeat detections.
+- **Single-Track Multiprocessing Fix**: Automatically disables multiprocessing when processing $\le 1$ track to prevent Matplotlib GUI event-loop deadlocks on macOS.
+
+---
 
 **Table of Contents**
 
+- [Fork Details](#fork-details-alexgorbatchevall-in-one)
 - [Installation](#installation)
 - [Usage for CLI](#usage-for-cli)
 - [Usage for Python](#usage-for-python)
