@@ -36,6 +36,7 @@ def visualize(
     return_list = False
     results = [results]
 
+  # agorbatchev: Avoid Matplotlib GUI deadlocks when rendering single track figures in multiprocessing pools on macOS
   if len(results) <= 1:
     multiprocess = False
 
@@ -67,6 +68,7 @@ def _plot(
     colors = HARMONIX_COLORS
 
   sr = 44100
+  # agorbatchev: Fallback to librosa.load when demucs.separate.load_track is missing in modern demucs 4.x
   try:
     y = demucs.separate.load_track(result.path, 1, sr)[0].numpy()
   except (AttributeError, Exception):

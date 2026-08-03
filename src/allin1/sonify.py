@@ -23,6 +23,7 @@ def sonify(
     return_list = False
     results = [results]
 
+  # agorbatchev: Avoid multiprocessing overhead and process spawning deadlocks when processing 1 track
   if len(results) <= 1:
     multiprocess = False
 
@@ -49,6 +50,7 @@ def _sonify(
   out_dir: PathLike = None,
 ) -> Tuple[NDArray, float]:
   sr = 44100
+  # agorbatchev: Fallback to librosa.load when demucs.separate.load_track is missing in modern demucs 4.x
   try:
     y = demucs.separate.load_track(result.path, 2, sr).numpy()
   except (AttributeError, Exception):
@@ -84,6 +86,7 @@ def _sonify_metronome(
   # Exclude downbeats from beats.
   downbeats = np.asarray(result.downbeats)
   beats = np.asarray(result.beats)
+  # agorbatchev: Guard against zero-size array reduction error when downbeats or beats are empty
   if len(downbeats) > 0 and len(beats) > 0:
     dists = np.abs(downbeats[:, np.newaxis] - beats).min(axis=0)
     beats = beats[dists > 0.03]

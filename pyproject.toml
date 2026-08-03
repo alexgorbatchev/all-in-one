@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
   "numpy",
   "librosa",
+  # agorbatchev: Use CPJKU/madmom git master for Python 3.12 compatibility (fixes collections.MutableSequence and np.float removal)
   "madmom @ git+https://github.com/CPJKU/madmom",
   "natten; platform_system == 'Darwin'",
   "demucs",
@@ -57,6 +58,7 @@ allin1-preprocess = "allin1.training.preprocess:main"
 [tool.hatch.version]
 path = "src/allin1/__about__.py"
 
+# agorbatchev: Required by hatchling to build wheels with direct git dependencies (madmom)
 [tool.hatch.metadata]
 allow-direct-references = true
 
