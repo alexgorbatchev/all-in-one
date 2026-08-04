@@ -7,6 +7,8 @@ from tqdm import tqdm
 from multiprocessing import Pool
 
 
+# agorbatchev: Pure PyTorch implementation of the 81-band logarithmic semitone filterbank
+# Replaces madmom's FilteredSpectrogramProcessor with 0 C-extensions or external DSP library dependencies
 def build_log_filterbank(sr: int = 44100, frame_size: int = 2048, num_bands: int = 12, fmin: float = 30.0, fmax: float = 17000.0, fref: float = 440.0) -> torch.Tensor:
   bin_freqs = np.fft.rfftfreq(frame_size, 1.0 / sr)[1:]  # 1024 bins
   
@@ -43,6 +45,7 @@ def build_log_filterbank(sr: int = 44100, frame_size: int = 2048, num_bands: int
   return torch.from_numpy(filterbank)
 
 
+# agorbatchev: Compute STFT log-spectrogram for an audio stem in pure PyTorch
 def _compute_stem_log_spec(audio_path: Path, fb_t: torch.Tensor, sr: int = 44100, frame_size: int = 2048, fps: int = 100) -> np.ndarray:
   y, _ = librosa.load(audio_path, sr=sr, mono=True)
   hop_length = int(sr / fps)

@@ -120,6 +120,7 @@ def analyze(
     ]
 
   # Analyze the tracks that are not analyzed yet.
+  # agorbatchev: Initialize demix_paths and spec_paths to prevent UnboundLocalError when all tracks are already analyzed
   demix_paths = []
   spec_paths = []
   if todo_paths:
@@ -174,6 +175,7 @@ def analyze(
     _sonify(results, out_dir=sonify, multiprocess=multiprocess)
     print(f'=> Sonified tracks are successfully saved to {sonify}')
 
+  # agorbatchev: Only attempt byproduct cleanup if todo_paths was non-empty to avoid UnboundLocalError
   if not keep_byproducts and todo_paths:
     for path in demix_paths:
       for stem in ['bass', 'drums', 'other', 'vocals']:
