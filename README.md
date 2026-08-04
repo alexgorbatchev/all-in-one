@@ -32,6 +32,7 @@ uv pip install "allin1 @ git+https://github.com/alexgorbatchev/all-in-one"
 - **Demucs 4.x Audio Loading**: Added `librosa.load` fallbacks for `demucs.separate.load_track` in `src/allin1/visualize.py` and `src/allin1/sonify.py`.
 - **Metronome Reduction Guard**: Added array size validation in `_sonify_metronome` to prevent `ValueError` on empty beat/downbeat detections.
 - **Single-Track Multiprocessing Fix**: Automatically disables multiprocessing when processing $\le 1$ track to prevent Matplotlib GUI event-loop deadlocks on macOS.
+- **BPM Constraints for Beat Tracking (`min_bpm`, `max_bpm`)**: Added `min_bpm` and `max_bpm` parameters to `allin1.analyze()` and downstream post-processing pipelines (merged from `jhurliman/all-in-one`), enabling custom BPM priors to eliminate tempo octave misdetections (half-time / double-time errors).
 
 ---
 
