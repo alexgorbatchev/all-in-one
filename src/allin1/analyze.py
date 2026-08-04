@@ -120,6 +120,8 @@ def analyze(
     ]
 
   # Analyze the tracks that are not analyzed yet.
+  demix_paths = []
+  spec_paths = []
   if todo_paths:
     # Run HTDemucs for source separation only for the tracks that are not analyzed yet.
     demix_paths = demix(todo_paths, demix_dir, device)
@@ -172,7 +174,7 @@ def analyze(
     _sonify(results, out_dir=sonify, multiprocess=multiprocess)
     print(f'=> Sonified tracks are successfully saved to {sonify}')
 
-  if not keep_byproducts:
+  if not keep_byproducts and todo_paths:
     for path in demix_paths:
       for stem in ['bass', 'drums', 'other', 'vocals']:
         (path / f'{stem}.wav').unlink(missing_ok=True)
