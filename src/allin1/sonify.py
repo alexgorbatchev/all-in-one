@@ -146,6 +146,8 @@ def _sonify_boundaries(
     drop = _synthesize_drop(sr)
 
     drop_start = int(segment.start * sr)
+    if drop_start >= length:
+      continue
     drop_end = drop_start + len(drop)
     if drop_end > length:
       drop = drop[:length - drop_start]
