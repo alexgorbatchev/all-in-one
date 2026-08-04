@@ -1,7 +1,8 @@
 import torch
-
-from typing import Optional
-from madmom.features.downbeats import DBNDownBeatTrackingProcessor
+import numpy as np
+from typing import Optional, List
+# agorbatchev: Use modern CPJKU beat-this Postprocessor instead of legacy madmom DBN
+from beat_this.inference import Postprocessor
 from ..typings import AllInOneOutput
 from ..config import Config
 
@@ -13,48 +14,29 @@ def postprocess_metrical_structure(
   min_bpm: Optional[float] = None,
   max_bpm: Optional[float] = None,
 ):
-  # agorbatchev: Use provided BPM constraints or fall back to config defaults (bpm_min/bpm_max)
-  effective_min_bpm = min_bpm if min_bpm is not None else cfg.bpm_min
-  effective_max_bpm = max_bpm if max_bpm is not None else cfg.bpm_max
-
-  postprocessor_downbeat = DBNDownBeatTrackingProcessor(
-    beats_per_bar=[3, 4],
-    threshold=cfg.best_threshold_downbeat,
-    fps=cfg.fps,
-    min_bpm=effective_min_bpm,
-    max_bpm=effective_max_bpm,
-  )
-
   raw_prob_beats = torch.sigmoid(logits.logits_beat[0])
   raw_prob_downbeats = torch.sigmoid(logits.logits_downbeat[0])
 
-  # Transform the raw probabilities into activations indicating:
-  # 1. beat but not downbeat
-  # 2. downbeat
-  # 3. nothing
-  # for madmom's DBNDownBeatTrackingProcessor
-  activations_beat = raw_prob_beats
-  activations_downbeat = raw_prob_downbeats
-  activations_no_beat = 1. - activations_beat
-  activations_no_downbeat = 1. - activations_downbeat
-  activations_no = (activations_no_beat + activations_no_downbeat) / 2.
-  activations_xbeat = torch.maximum(torch.tensor(1e-8), activations_beat - activations_downbeat)
-  activations_combined = torch.stack([activations_xbeat, activations_downbeat, activations_no], dim=-1)
-  activations_combined /= activations_combined.sum(dim=-1, keepdim=True)
-  activations_combined = activations_combined.cpu().numpy()
+  postproc = Postprocessor(type='minimal', fps=cfg.fps)
+  beats, downbeats = postproc(raw_prob_beats, raw_prob_downbeats)
 
-  pred_downbeat_times = postprocessor_downbeat(activations_combined[:, :2])
-
-  beats = pred_downbeat_times[:, 0]
-  beat_positions = pred_downbeat_times[:, 1]
-  downbeats = pred_downbeat_times[beat_positions == 1., 0]
-
-  beats = beats.tolist()
-  downbeats = downbeats.tolist()
-  beat_positions = beat_positions.astype('int').tolist()
+  beat_positions = _assign_beat_positions(beats, downbeats)
 
   return {
-    'beats': beats,
-    'downbeats': downbeats,
+    'beats': beats.tolist() if isinstance(beats, np.ndarray) else list(beats),
+    'downbeats': downbeats.tolist() if isinstance(downbeats, np.ndarray) else list(downbeats),
     'beat_positions': beat_positions,
   }
+
+
+def _assign_beat_positions(beats: np.ndarray, downbeats: np.ndarray, beats_per_bar: int = 4) -> List[int]:
+  if len(beats) == 0:
+    return []
+  beat_positions = []
+  current_pos = 1
+  for beat in beats:
+    if len(downbeats) > 0 and np.min(np.abs(downbeats - beat)) < 0.05:
+      current_pos = 1
+    beat_positions.append(current_pos)
+    current_pos = (current_pos % beats_per_bar) + 1
+  return beat_positions
