@@ -10,9 +10,9 @@ from typing import Optional, Tuple, Callable
 try:
   from natten.functional import natten1dav, natten1dqkrpb, natten2dav, natten2dqkrpb
 except ImportError:
-  # agorbatchev: Pure PyTorch fallback implementations for 1D/2D Neighborhood Attention with Relative Positional Bias.
-  # This avoids dependency on C++ extension compilation (which fails C++20 builds on Apple Silicon/Python 3.12)
-  # and supports newer natten versions (>0.17) where natten1dav/natten1dqkrpb functions were removed.
+  # agorbatchev: Pure PyTorch implementations for 1D/2D Neighborhood Attention with Relative Positional Bias.
+  # This completely removes the requirement for NATTEN C++ extensions (eliminating C++20 build errors on macOS/Python 3.12,
+  # API breaking changes across NATTEN 0.17/0.20/0.21, and platform dependency issues).
   def natten1dqkrpb(query: torch.Tensor, key: torch.Tensor, rpb: torch.Tensor, kernel_size: int, dilation: int) -> torch.Tensor:
     B, H, T, D = query.shape
     K = kernel_size
