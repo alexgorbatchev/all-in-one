@@ -1,5 +1,6 @@
 import torch
 
+from typing import Optional
 from madmom.features.downbeats import DBNDownBeatTrackingProcessor
 from ..typings import AllInOneOutput
 from ..config import Config
@@ -8,11 +9,20 @@ from ..config import Config
 def postprocess_metrical_structure(
   logits: AllInOneOutput,
   cfg: Config,
+  # agorbatchev: Allow min_bpm and max_bpm overrides for beat tracking constraints
+  min_bpm: Optional[float] = None,
+  max_bpm: Optional[float] = None,
 ):
+  # agorbatchev: Use provided BPM constraints or fall back to config defaults (bpm_min/bpm_max)
+  effective_min_bpm = min_bpm if min_bpm is not None else cfg.bpm_min
+  effective_max_bpm = max_bpm if max_bpm is not None else cfg.bpm_max
+
   postprocessor_downbeat = DBNDownBeatTrackingProcessor(
     beats_per_bar=[3, 4],
     threshold=cfg.best_threshold_downbeat,
     fps=cfg.fps,
+    min_bpm=effective_min_bpm,
+    max_bpm=effective_max_bpm,
   )
 
   raw_prob_beats = torch.sigmoid(logits.logits_beat[0])

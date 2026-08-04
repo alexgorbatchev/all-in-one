@@ -1,6 +1,6 @@
 import torch
 
-from typing import List, Union
+from typing import List, Optional, Union
 from tqdm import tqdm
 from .demix import demix
 from .spectrogram import extract_spectrograms
@@ -32,6 +32,9 @@ def analyze(
   keep_byproducts: bool = False,
   overwrite: bool = False,
   multiprocess: bool = True,
+  # agorbatchev: Optional min_bpm and max_bpm overrides for metrical beat tracking
+  min_bpm: Optional[float] = None,
+  max_bpm: Optional[float] = None,
 ) -> Union[AnalysisResult, List[AnalysisResult]]:
   """
   Analyzes the provided audio files and returns the analysis results.
@@ -67,6 +70,10 @@ def analyze(
       Whether to overwrite the existing analysis results or not. Default is False.
   multiprocess : bool, optional
       Whether to use multiprocessing for spectrogram extraction, visualization, and sonification. Default is True.
+  min_bpm : float, optional
+      Minimum BPM constraint for beat tracking. If not specified, uses the model's default (cfg.bpm_min).
+  max_bpm : float, optional
+      Maximum BPM constraint for beat tracking. If not specified, uses the model's default (cfg.bpm_max).
 
   Returns
   -------
@@ -138,6 +145,8 @@ def analyze(
           device=device,
           include_activations=include_activations,
           include_embeddings=include_embeddings,
+          min_bpm=min_bpm,
+          max_bpm=max_bpm,
         )
 
         # Save the result right after the inference.

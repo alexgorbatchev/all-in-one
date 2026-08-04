@@ -5,7 +5,7 @@ import torch
 from dataclasses import asdict
 from pathlib import Path
 from glob import glob
-from typing import List, Union
+from typing import List, Optional, Union
 from .utils import mkpath, compact_json_number_array
 from .typings import AllInOneOutput, AnalysisResult, PathLike
 from .postprocessing import (
@@ -22,13 +22,18 @@ def run_inference(
   device: str,
   include_activations: bool,
   include_embeddings: bool,
+  # agorbatchev: Pass min_bpm and max_bpm constraints to metrical postprocessing
+  min_bpm: Optional[float] = None,
+  max_bpm: Optional[float] = None,
 ) -> AnalysisResult:
   spec = np.load(spec_path)
   spec = torch.from_numpy(spec).unsqueeze(0).to(device)
 
   logits = model(spec)
 
-  metrical_structure = postprocess_metrical_structure(logits, model.cfg)
+  metrical_structure = postprocess_metrical_structure(
+    logits, model.cfg, min_bpm=min_bpm, max_bpm=max_bpm
+  )
   functional_structure = postprocess_functional_structure(logits, model.cfg)
   bpm = estimate_tempo_from_beats(metrical_structure['beats'])
 
